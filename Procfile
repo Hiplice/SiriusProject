@@ -1,0 +1,1 @@
+web: gunicorn openapi-sirius-project.wsgi --log-file -
