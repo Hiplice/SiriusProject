@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<body onload="start()">
+  <script type="text/javascript">
+    function start() {
+      const hash = window.location.hash;
+      const s = hash.slice(1, hash.length);
+      const obj = JSON.parse('{"' + s.replace(/=/g, '":"').replace(/&/g, '","') + '"}');
+
+      document.getElementById('code').value = obj['code'];
+      document.getElementById('state').value = obj['state'];
+      document.getElementById('id_token').value = obj['id_token'];
+      document.getElementById('session_state').value = obj['session_state'];
+      document.getElementById('scope').value = obj['scope'];
+      document.getElementById('access_token').value = obj['access_token'];
+      document.getElementById('error').value = obj['error'];
+
+      document.getElementsByTagName('form')[0].submit();
+    }
+  </script>
+  <form id="form" method="post">
+      {% csrf_token %}
+    <input type="hidden" id="code" name="code" />
+    <input type="hidden" id="state" name="state" />
+    <input type="hidden" id="id_token" name="id_token" />
+    <input type="hidden" id="session_state" name="session_state" />
+    <input type="hidden" id="scope" name="scope" />
+    <input type="hidden" id="access_token" name="access_token" />
+    <input type="hidden" id="error" name="error" />
+  </form>
+</body>
+</html>
