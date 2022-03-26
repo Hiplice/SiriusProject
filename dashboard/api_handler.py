@@ -1,55 +1,86 @@
 import json
 import requests
-import urllib3
-import sqlite3
 
 
-def connect_db():
-    try:
-        sqlite_connection = sqlite3.connect('sqlite_python.db')
-        cursor = sqlite_connection.cursor()
-        print("База данных создана и успешно подключена к SQLite")
+def get_access_token(client_id):
+    url = "https://sb0.test.openbankingrussia.ru/sandbox0/as/aft/connect/token"
 
-        sqlite_select_query = "select sqlite_version();"
-        cursor.execute(sqlite_select_query)
-        record = cursor.fetchall()
-        print("Версия базы данных SQLite: ", record)
-        cursor.close()
+    payload = f'client_id={client_id}&grant_type=client_credentials&scope=accounts&state=e0d8e246-a46f-4352-b581-4f1d0d0df6c4'
+    headers = {
+        'Authorization': 'Basic MDU2OWZlMWU2NWM2NDA1ZjhhZWJhNWQ3M2JjMzg3ZTI6WWhZUUVrRTJReXlpaEoyekpSSXNJRDlFUDE5WjlJWnU=',
+        'Content-Type': 'application/x-www-form-urlencoded'
+    }
 
-    except sqlite3.Error as error:
-        print("Ошибка при подключении к sqlite", error)
-    finally:
-        if (sqlite_connection):
-            sqlite_connection.close()
-            print("Соединение с SQLite закрыто")
-    urllib3.disable_warnings()
+    return json.loads(requests.request("POST", url, headers=headers, data=payload, verify=False).text)
 
 
-def getAccounts(auth):
+def create_consent(access_token):
+    url = "https://sb0.test.openbankingrussia.ru/sandbox0/open-banking/v1.2/aisp/account-consents"
+
+    payload = json.dumps({
+        "Data": {
+            "permissions": [
+                "ReadAccountsBasic",
+                "ReadBalances",
+                "ReadTransactionsCredits",
+                "ReadTransactionsDebits",
+                "ReadTransactionsDetail",
+                "ReadTransactionsBasic"
+            ],
+            "expirationDateTime": "2024-10-03T00:00:00+00:00",
+            "transactionFromDateTime": "2019-01-01T00:00:00+00:00",
+            "transactionToDateTime": "2024-12-31T00:00:00+00:00"
+        },
+        "Risk": {}
+    })
+    headers = {
+        'Authorization': f'Bearer {access_token}',
+        'Content-Type': 'application/json'
+    }
+
+    response = requests.request("POST", url, headers=headers, data=payload, verify=False)
+    return json.loads(response.text)
+
+
+def get_hybrid_token(client_id, client_secret, code):
+    url = "https://sb0.test.openbankingrussia.ru/sandbox0/as/aft/connect/token"
+
+    payload = f'client_id={client_id}&client_secret={client_secret}&grant_type=authorization_code&code={code}&redirect_uri=http%3A%2F%2F127.0.0.1%3A8000%2Fgetconsent'
+    headers = {
+        'Content-Type': 'application/x-www-form-urlencoded'
+    }
+
+    response = requests.request("POST", url, headers=headers, data=payload, verify=False)
+    return json.loads(response.text)
+
+
+def get_accounts(hybrid_token):
     url = "https://sb0.test.openbankingrussia.ru/sandbox0/open-banking/v1.2/aisp/accounts"
     payload={}
     headers = {
-        'Authorization': auth
+        'Authorization': f'Bearer {hybrid_token}'
         }
     response = requests.request("GET", url, headers=headers, data=payload, verify=False)
-    return json.dumps(response.text)
+    return json.loads(response.text)
 
 
-def getTransactions(auth):
-    url = "https://sb0.test.openbankingrussia.ru/sandbox0/open-banking/v1.2/aisp/transactions"
-    payload={}
+def get_transactions(hybrid_token, account_id):
+    url = f"https://sb0.test.openbankingrussia.ru/sandbox0/open-banking/v1.2/aisp/accounts/{account_id}/transactions"
+
+    payload = {}
     headers = {
-        'Authorization': auth
-        }
+        'Authorization': f'Bearer {hybrid_token}'
+    }
+
     response = requests.request("GET", url, headers=headers, data=payload, verify=False)
-    return json.dumps(response.text)
+    return json.loads(response.text)
 
 
-def getBalances(auth):
+def get_balances(hybrid_token):
     url = "https://sb0.test.openbankingrussia.ru/sandbox0/open-banking/v1.2/aisp/balances"
     payload={}
     headers = {
-        'Authorization': auth
+        'Authorization': f'Bearer {hybrid_token}'
         }
     response = requests.request("GET", url, headers=headers, data=payload, verify=False)
-    return json.dumps(response.text)
+    return json.loads(response.text)
